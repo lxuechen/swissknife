@@ -12,6 +12,7 @@
 - data loaders,
 - misc log sanitization.
 """
+
 import abc
 import argparse
 import collections
@@ -92,7 +93,9 @@ def average_over_seed(seq_of_seq):  # Here purely due to backward compatibility.
     return seq_of_seq.mean(0), seq_of_seq.std(0)
 
 
-def average_metric_over_seeds(*seqs: Union[Sequence[Numeric], Sequence[Dict[str, Numeric]]]):
+def average_metric_over_seeds(
+    *seqs: Union[Sequence[Numeric], Sequence[Dict[str, Numeric]]],
+):
     # seqs is an iterable. Each seq is a sequence of numbers or dicts to average over.
     single_input = len(seqs) == 1
     outputs = tuple(_average_metric_over_seeds_for_single_seq(seq) for seq in seqs)
@@ -101,7 +104,9 @@ def average_metric_over_seeds(*seqs: Union[Sequence[Numeric], Sequence[Dict[str,
     return outputs
 
 
-def _average_metric_over_seeds_for_single_seq(seq: Union[Sequence[Numeric], Sequence[Dict[str, Numeric]]]):
+def _average_metric_over_seeds_for_single_seq(
+    seq: Union[Sequence[Numeric], Sequence[Dict[str, Numeric]]],
+):
     # TODO: Enable further nesting, e.g., dict where values could be list or tuple.
     if len(seq) == 0:
         return ()
@@ -118,7 +123,9 @@ def _average_metric_over_seeds_for_single_seq(seq: Union[Sequence[Numeric], Sequ
             output[key] = (float(np.mean(values)), float(np.std(values)))
         return output
     else:
-        raise ValueError(f"Expected each elem of seq to be of type int, float, or dict, but found type: {type(seq[0])}")
+        raise ValueError(
+            f"Expected each elem of seq to be of type int, float, or dict, but found type: {type(seq[0])}"
+        )
 
 
 def single_standard_deviation(sample, return_type="tuple"):
@@ -175,7 +182,9 @@ def _make_r_io_base(f: PathOrIOBase, mode: str):
     return f
 
 
-def jdump(obj: Union[str, dict, list], f: PathOrIOBase, mode="w", indent=4, default=str):
+def jdump(
+    obj: Union[str, dict, list], f: PathOrIOBase, mode="w", indent=4, default=str
+):
     """Dump a str or dictionary to a file in json format.
 
     Args:
@@ -284,7 +293,9 @@ def listdir(
 
     file_names = os.listdir(directory)
     for skip_suffix in skip_suffixes:
-        file_names = [file_name for file_name in file_names if not file_name.endswith(skip_suffix)]
+        file_names = [
+            file_name for file_name in file_names if not file_name.endswith(skip_suffix)
+        ]
 
     if full_path:
         file_names = [os.path.join(directory, file_name) for file_name in file_names]
@@ -297,9 +308,15 @@ def list_file_paths(directory, skip_suffixes: Union[Sequence, str] = ()):
         skip_suffixes = (skip_suffixes,)
     skip_suffixes = tuple(skip_suffixes) + (".DS_Store",)
 
-    file_paths = [os.path.join(root, file) for root, dirs, files in os.walk(directory) for file in files]
+    file_paths = [
+        os.path.join(root, file)
+        for root, dirs, files in os.walk(directory)
+        for file in files
+    ]
     for suffix in skip_suffixes:
-        file_paths = [file_path for file_path in file_paths if not file_path.endswith(suffix)]
+        file_paths = [
+            file_path for file_path in file_paths if not file_path.endswith(suffix)
+        ]
     return file_paths
 
 
@@ -387,7 +404,9 @@ def write_config(
         json.dump(args.__dict__, f, indent=4)
     logging.warning(f"Wrote config: {config_path}")
 
-    if (hasattr(args, "cloud_storage") and args.cloud_storage) or (hasattr(args, "to_gcs") and args.to_gcs):
+    if (hasattr(args, "cloud_storage") and args.cloud_storage) or (
+        hasattr(args, "to_gcs") and args.to_gcs
+    ):
         gs_upload_from_path(config_path, remove_local=False)
         logging.warning(f"Uploaded to cloud: {config_path}")
 
@@ -456,7 +475,9 @@ def parallel_sort(*args, key=None, reverse=False):
     """Parallel sort of multiple lists."""
     # args: A bunch of sequences.
     if key is None:
-        key = lambda inputs: inputs[0]  # Parallel sort based on the order of the first list.
+        key = lambda inputs: inputs[
+            0
+        ]  # Parallel sort based on the order of the first list.
     ret = sorted(zip_(*args), key=key, reverse=reverse)
     return tuple([ret_i[j] for ret_i in ret] for j in range(len(args)))
 
@@ -495,10 +516,16 @@ def show_env(args_or_device=None):
         if hasattr(args_or_device, "device"):
             args_or_device = args_or_device.device
         elif hasattr(args_or_device, "no_gpu"):
-            args_or_device = "cuda" if torch.cuda.is_available() and not args_or_device.no_gpu else "cpu"
+            args_or_device = (
+                "cuda"
+                if torch.cuda.is_available() and not args_or_device.no_gpu
+                else "cpu"
+            )
         logging.warning(f"Running on device: {args_or_device}")
     logging.warning(f"CUDA device count: {torch.cuda.device_count()}")
-    logging.warning(f"Running Python: \n{sys.version}; \nversion info: \n{sys.version_info}")
+    logging.warning(
+        f"Running Python: \n{sys.version}; \nversion info: \n{sys.version_info}"
+    )
     logging.warning(f"Running PyTorch: {torch.__version__}")
     logging.warning(f"Running six: {six.__version__}")
 
@@ -549,7 +576,9 @@ class Timeout(contextlib.ContextDecorator):
         raise TimeoutError(self.error_message)  # This doesn't work in Py2.
 
     def __enter__(self):
-        signal.signal(signal.SIGALRM, self.handle_timeout)  # Create custom handler for SIGALRM.
+        signal.signal(
+            signal.SIGALRM, self.handle_timeout
+        )  # Create custom handler for SIGALRM.
         # `signal.ITIMER_REAL` will deliver SIGALRM in `self.seconds`.
         # Better than directly sending SIGALRM, which doesn't allow floating-point seconds.
         signal.setitimer(signal.ITIMER_REAL, self.seconds)
@@ -619,7 +648,9 @@ def run_tasks(
 
 
 def runs_tasks(*args, **kwargs):
-    logging.warning("`runs_tasks` will be deprecated in the future. Consider using `run_tasks` instead.")
+    logging.warning(
+        "`runs_tasks` will be deprecated in the future. Consider using `run_tasks` instead."
+    )
     return run_tasks(*args, **kwargs)
 
 
@@ -634,7 +665,9 @@ def collect_tensors(verbose=False):
     count = 0
     for obj in gc.get_objects():
         try:
-            if torch.is_tensor(obj) or (hasattr(obj, "data") and torch.is_tensor(obj.data)):
+            if torch.is_tensor(obj) or (
+                hasattr(obj, "data") and torch.is_tensor(obj.data)
+            ):
                 if verbose:
                     print(type(obj), obj.size())
             count += 1
@@ -651,7 +684,11 @@ def log_shape(*args):
 def flatten(possibly_sequence: Union[torch.Tensor, Sequence[torch.Tensor]]):
     if torch.is_tensor(possibly_sequence):
         return possibly_sequence.reshape(-1)
-    return torch.cat([p.reshape(-1) for p in possibly_sequence]) if len(possibly_sequence) > 0 else torch.tensor([])
+    return (
+        torch.cat([p.reshape(-1) for p in possibly_sequence])
+        if len(possibly_sequence) > 0
+        else torch.tensor([])
+    )
 
 
 def flatten_nested(possibly_sequence: Union[torch.Tensor, Sequence]):
@@ -661,9 +698,13 @@ def flatten_nested(possibly_sequence: Union[torch.Tensor, Sequence]):
     return torch.cat(flat_tensors, dim=0) if len(flat_tensors) > 0 else torch.tensor([])
 
 
-def ravel_pytree(possibly_sequence: Union[Sequence, torch.Tensor]) -> Tuple[torch.Tensor, Callable]:
+def ravel_pytree(
+    possibly_sequence: Union[Sequence, torch.Tensor],
+) -> Tuple[torch.Tensor, Callable]:
     if torch.is_tensor(possibly_sequence):
-        return possibly_sequence.reshape(-1), lambda x: x.reshape(possibly_sequence.size())
+        return possibly_sequence.reshape(-1), lambda x: x.reshape(
+            possibly_sequence.size()
+        )
 
     def make_unravel(size):  # Need this function to copy size!
         return lambda x: x.reshape(size)
@@ -680,7 +721,10 @@ def ravel_pytree(possibly_sequence: Union[Sequence, torch.Tensor]) -> Tuple[torc
         numels.append(flat_i.numel())
 
     def unravel(flat: torch.Tensor):
-        return [unravel_(flat_) for flat_, unravel_ in zip_(flat.split(split_size=numels), unravels)]
+        return [
+            unravel_(flat_)
+            for flat_, unravel_ in zip_(flat.split(split_size=numels), unravels)
+        ]
 
     return torch.cat(flats) if len(flats) > 0 else torch.tensor([]), unravel
 
@@ -755,14 +799,19 @@ def flat_to_shape(flat_tensor: torch.Tensor, shapes: Sequence):
     `flat_tensor` must have exactly the number of elements as stated in `shapes`.
     """
     numels = [shape.numel() for shape in shapes]
-    return [flat.reshape(shape) for flat, shape in zip_(flat_tensor.split(split_size=numels), shapes)]
+    return [
+        flat.reshape(shape)
+        for flat, shape in zip_(flat_tensor.split(split_size=numels), shapes)
+    ]
 
 
 def convert_none_to_zeros(
     sequence: Sequence[Union[torch.Tensor, type(None)]],
     like_sequence: Sequence[torch.Tensor],
 ):
-    return [torch.zeros_like(q) if p is None else p for p, q in zip(sequence, like_sequence)]
+    return [
+        torch.zeros_like(q) if p is None else p for p, q in zip(sequence, like_sequence)
+    ]
 
 
 def make_seq_requires_grad(sequence: Sequence[torch.Tensor]):
@@ -792,7 +841,9 @@ def isnan_or_isinf(*args, **kwargs):
 def vjp(outputs, inputs, **kwargs):
     if torch.is_tensor(inputs):
         inputs = [inputs]
-    _dummy_inputs = [torch.as_strided(i, (), ()) for i in inputs]  # Workaround for PyTorch bug #39784.
+    _dummy_inputs = [
+        torch.as_strided(i, (), ()) for i in inputs
+    ]  # Workaround for PyTorch bug #39784.
 
     if torch.is_tensor(outputs):
         outputs = [outputs]
@@ -805,7 +856,9 @@ def vjp(outputs, inputs, **kwargs):
 def jvp(outputs, inputs, grad_inputs=None, **kwargs):
     if torch.is_tensor(inputs):
         inputs = [inputs]
-    _dummy_inputs = [torch.as_strided(i, (), ()) for i in inputs]  # Workaround for PyTorch bug #39784.
+    _dummy_inputs = [
+        torch.as_strided(i, (), ()) for i in inputs
+    ]  # Workaround for PyTorch bug #39784.
 
     if torch.is_tensor(outputs):
         outputs = [outputs]
@@ -823,12 +876,19 @@ def jvp(outputs, inputs, grad_inputs=None, **kwargs):
 
 def to_numpy(*possibly_tensors: Union[torch.Tensor, np.ndarray, float]):
     arrays = possibly_tensors
-    arrays = [t.item() if isinstance(t, torch.Tensor) and t.numel() == 1 else t for t in arrays]
-    arrays = [t.detach().cpu().numpy() if isinstance(t, torch.Tensor) else t for t in arrays]
+    arrays = [
+        t.item() if isinstance(t, torch.Tensor) and t.numel() == 1 else t
+        for t in arrays
+    ]
+    arrays = [
+        t.detach().cpu().numpy() if isinstance(t, torch.Tensor) else t for t in arrays
+    ]
     return arrays[0] if len(arrays) == 1 else arrays
 
 
-def manual_seed(args_or_seed: Union[int, argparse.Namespace], hardcore=True, disable_tf=True):
+def manual_seed(
+    args_or_seed: Union[int, argparse.Namespace], hardcore=True, disable_tf=True
+):
     if hasattr(args_or_seed, "seed"):
         args_or_seed = args_or_seed.seed
     random.seed(args_or_seed)
@@ -902,7 +962,10 @@ def manual_dtype(args_or_dtype: Union[str, argparse.Namespace]):
 def trainable_parameters(*modules: nn.Module):
     """Return the parameters which require gradient."""
     single_module = len(modules) == 1
-    outs = [[param for param in module.parameters() if param.requires_grad] for module in modules]
+    outs = [
+        [param for param in module.parameters() if param.requires_grad]
+        for module in modules
+    ]
     if single_module:
         return outs[0]
     return outs
@@ -912,20 +975,28 @@ def count_parameters(*modules: nn.Module, only_differentiable: Optional[bool] = 
     """Count the number of parameters for each module."""
     param_lists = [list(m.parameters()) for m in modules]
     if only_differentiable:
-        param_lists = [[p for p in param_list if p.requires_grad] for param_list in param_lists]
+        param_lists = [
+            [p for p in param_list if p.requires_grad] for param_list in param_lists
+        ]
     numels = [sum(p.numel() for p in param_list) for param_list in param_lists]
     return numels[0] if len(modules) == 1 else numels
 
 
-def count_parameter_tensors(*modules: nn.Module, only_differentiable: Optional[bool] = False):
+def count_parameter_tensors(
+    *modules: nn.Module, only_differentiable: Optional[bool] = False
+):
     param_lists = [list(m.parameters()) for m in modules]
     if only_differentiable:
-        param_lists = [[p for p in param_list if p.requires_grad] for param_list in param_lists]
+        param_lists = [
+            [p for p in param_list if p.requires_grad] for param_list in param_lists
+        ]
     lens = [len(param_list) for param_list in param_lists]
     return lens[0] if len(modules) == 1 else lens
 
 
-def count_tensor_list_size(tensor_list: Union[torch.Tensor, Sequence, Iterator], format="byte"):
+def count_tensor_list_size(
+    tensor_list: Union[torch.Tensor, Sequence, Iterator], format="byte"
+):
     """Approximately count the size of a list of tensors in terms of bytes."""
     if torch.is_tensor(tensor_list):
         tensor_list = [tensor_list]
@@ -1201,7 +1272,9 @@ def AverageModel(model: nn.Module, avg_fn: Union[str, Callable] = "ema", **kwarg
             gamma = kwargs.pop("gamma", 0.999)
 
             def ema_avg_fn(averaged_model_parameter, model_parameter, num_averaged):
-                return gamma * averaged_model_parameter + (1.0 - gamma) * model_parameter
+                return (
+                    gamma * averaged_model_parameter + (1.0 - gamma) * model_parameter
+                )
 
             avg_fn = ema_avg_fn
         elif avg_fn == "warmup_ema":
@@ -1210,9 +1283,13 @@ def AverageModel(model: nn.Module, avg_fn: Union[str, Callable] = "ema", **kwarg
             #   International conference on machine learning. PMLR, 2019.
             decay_rate = kwargs.pop("decay_rate", 0.9999)
 
-            def warmup_ema_avg_fn(averaged_model_parameter, model_parameter, num_averaged):
+            def warmup_ema_avg_fn(
+                averaged_model_parameter, model_parameter, num_averaged
+            ):
                 gamma = min(decay_rate, (1 + num_averaged) / (10 + num_averaged))
-                return gamma * averaged_model_parameter + (1.0 - gamma) * model_parameter
+                return (
+                    gamma * averaged_model_parameter + (1.0 - gamma) * model_parameter
+                )
 
             avg_fn = warmup_ema_avg_fn
         else:
@@ -1220,7 +1297,9 @@ def AverageModel(model: nn.Module, avg_fn: Union[str, Callable] = "ema", **kwarg
     return torch.optim.swa_utils.AveragedModel(model, avg_fn=avg_fn, **kwargs)
 
 
-def denormalize(x: torch.Tensor, mean: Sequence[float], std: Sequence[float]) -> torch.Tensor:
+def denormalize(
+    x: torch.Tensor, mean: Sequence[float], std: Sequence[float]
+) -> torch.Tensor:
     """Unnormalize image for `torchvision.utils.save_image`."""
     # (bsz, n_channels, nh, hw) -> (n_channels, nh, nw, bsz).
     is_single_example = x.dim() == 3
@@ -1247,7 +1326,9 @@ def plot_wrapper(*args, suffixes: Optional[Sequence] = None, **kwargs):
         return plot(*args, **kwargs)  # Directly plot.
     else:
         if suffixes is None:
-            return plot(*args, img_path=img_path, **kwargs)  # Plot with img_path directly.
+            return plot(
+                *args, img_path=img_path, **kwargs
+            )  # Plot with img_path directly.
         else:
             # Append suffix to img_path.
             for suffix in suffixes:
@@ -1282,7 +1363,7 @@ def plot(
     stems2: Sequence = (),
     options2: Optional[Dict] = None,
     legend_options: Optional[Dict] = None,
-    disable_legend: Optional[bool] = False,
+    disable_legend: bool = False,
     finalized: bool = True,
     dpi: Optional[int] = None,
 ):
@@ -1317,7 +1398,8 @@ def plot(
         options2: Same format as above, but for twin plot.
 
         legend_options (dict, optional): A dictionary for kwargs passed to `ax.legend` or `plt.legend`.
-        disable_legend (bool, optional): Remove the legend.
+            For the list of args/kwargs, see https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.legend.html
+        disable_legend (bool): Remove the legend.
         finalized (bool, optional): Show or save the figure if True; otherwise the figure is still modifiable.
 
     Returns:
@@ -1386,11 +1468,12 @@ def plot(
         # Remove first legend then draw again to prevent second plot covering it.
         # https://stackoverflow.com/questions/29010078/matplotlib-data-being-plotted-over-legend-when-using-twinx
         legend.remove()
-        ax2.legend(**legend_options)
-        ax2.add_artist(legend)
-
-    if ax2 is None and disable_legend:
-        legend.remove()
+        if not disable_legend:
+            ax2.legend(**legend_options)
+            ax2.add_artist(legend)
+    else:
+        if disable_legend:
+            legend.remove()
 
     plt.tight_layout()
 
@@ -1521,10 +1604,14 @@ def _plot(
     for i, entry in enumerate(bars):
         kwargs = {key: entry[key] for key in entry if key != "x" and key != "height"}
         kwargs.pop("aux", None)
-        bar_label = kwargs.pop("bar_label", False)  # If True, give bars numbers at top (or right, if horizontal).
+        bar_label = kwargs.pop(
+            "bar_label", False
+        )  # If True, give bars numbers at top (or right, if horizontal).
         # Each bar has width, the starting position is - (l-1) / 2 * width.
         x, height = [np.array(entry[key]) for key in ("x", "height")]
-        bars = ax.bar(x - width * (len(bars) - 1) / 2 + width * i, height, width=width, **kwargs)
+        bars = ax.bar(
+            x - width * (len(bars) - 1) / 2 + width * i, height, width=width, **kwargs
+        )
         if bar_label:
             ax.bar_label(bars)
 
@@ -1619,7 +1706,9 @@ def plot_side_by_side(
         ax.axis("off")
         fig.add_subplot(ax)
 
-    left_block = gridspec.GridSpecFromSubplotSpec(nrows, ncols, subplot_spec=outer[0], wspace=0.0, hspace=0.0)
+    left_block = gridspec.GridSpecFromSubplotSpec(
+        nrows, ncols, subplot_spec=outer[0], wspace=0.0, hspace=0.0
+    )
     for ind, item in enumerate(figs1):
         ax = plt.Subplot(fig, left_block[ind])
         ax.set_axis_off()
@@ -1644,7 +1733,9 @@ def plot_side_by_side(
         ax.axis("off")
         fig.add_subplot(ax)
 
-    right_block = gridspec.GridSpecFromSubplotSpec(nrows, ncols, subplot_spec=outer[1], wspace=0.0, hspace=0.0)
+    right_block = gridspec.GridSpecFromSubplotSpec(
+        nrows, ncols, subplot_spec=outer[1], wspace=0.0, hspace=0.0
+    )
     for ind, item in enumerate(figs2):
         ax = plt.Subplot(fig, right_block[ind])
         ax.set_axis_off()
@@ -1880,8 +1971,12 @@ def zoom_axes(
     import matplotlib.pyplot as plt
 
     plt.tight_layout()
-    ax1_p0 = (ax.transData + fig.transFigure.inverted()).transform_point((axes_x[0], axes_y[0]))
-    ax1_p1 = (ax.transData + fig.transFigure.inverted()).transform_point((axes_x[1], axes_y[1]))
+    ax1_p0 = (ax.transData + fig.transFigure.inverted()).transform_point(
+        (axes_x[0], axes_y[0])
+    )
+    ax1_p1 = (ax.transData + fig.transFigure.inverted()).transform_point(
+        (axes_x[1], axes_y[1])
+    )
 
     ax1 = plt.axes([ax1_p0[0], ax1_p0[1], ax1_p1[0] - ax1_p0[0], ax1_p1[1] - ax1_p0[1]])
 
@@ -1984,7 +2079,12 @@ def zoom_axes(
         for tt in t:
             x = line1[0][0] * (1 - tt) + line1[0][1] * tt
             y = line1[1][0] * (1 - tt) + line1[1][1] * tt
-            if x <= box_zoom_x[0] or x >= box_zoom_x[1] or y <= box_zoom_y[0] or y >= box_zoom_y[1]:
+            if (
+                x <= box_zoom_x[0]
+                or x >= box_zoom_x[1]
+                or y <= box_zoom_y[0]
+                or y >= box_zoom_y[1]
+            ):
                 line1_cut[0][0] = x
                 line1_cut[1][0] = y
                 break
@@ -1992,7 +2092,9 @@ def zoom_axes(
         for tt in t[::-1]:
             x = line1[0][0] * (1 - tt) + line1[0][1] * tt
             y = line1[1][0] * (1 - tt) + line1[1][1] * tt
-            if (x <= box_axes_x[0] or x >= box_axes_x[1]) or (y <= box_axes_y[0] or y >= box_axes_y[1]):
+            if (x <= box_axes_x[0] or x >= box_axes_x[1]) or (
+                y <= box_axes_y[0] or y >= box_axes_y[1]
+            ):
                 line1_cut[0][1] = x
                 line1_cut[1][1] = y
                 break
@@ -2000,7 +2102,9 @@ def zoom_axes(
         for tt in t:
             x = line2[0][0] * (1 - tt) + line2[0][1] * tt
             y = line2[1][0] * (1 - tt) + line2[1][1] * tt
-            if (x <= box_zoom_x[0] or x >= box_zoom_x[1]) or (y <= box_zoom_y[0] or y >= box_zoom_y[1]):
+            if (x <= box_zoom_x[0] or x >= box_zoom_x[1]) or (
+                y <= box_zoom_y[0] or y >= box_zoom_y[1]
+            ):
                 line2_cut[0][0] = x
                 line2_cut[1][0] = y
                 break
@@ -2008,7 +2112,9 @@ def zoom_axes(
         for tt in t[::-1]:
             x = line2[0][0] * (1 - tt) + line2[0][1] * tt
             y = line2[1][0] * (1 - tt) + line2[1][1] * tt
-            if (x <= box_axes_x[0] or x >= box_axes_x[1]) or (y <= box_axes_y[0] or y >= box_axes_y[1]):
+            if (x <= box_axes_x[0] or x >= box_axes_x[1]) or (
+                y <= box_axes_y[0] or y >= box_axes_y[1]
+            ):
                 line2_cut[0][1] = x
                 line2_cut[1][1] = y
                 break
@@ -2112,17 +2218,25 @@ def gradcheck(
 
     # Grad wrt inputs.
     if grad_inputs:
-        torch.autograd.gradcheck(func_only_inputs, inputs, eps=eps, atol=atol, rtol=rtol)
+        torch.autograd.gradcheck(
+            func_only_inputs, inputs, eps=eps, atol=atol, rtol=rtol
+        )
 
     # Grad of grad wrt inputs.
     if gradgrad_inputs:
-        torch.autograd.gradgradcheck(func_only_inputs, inputs, eps=eps, atol=atol, rtol=rtol)
+        torch.autograd.gradgradcheck(
+            func_only_inputs, inputs, eps=eps, atol=atol, rtol=rtol
+        )
 
     # Grad wrt params.
     if grad_params:
         params = [p for m in modules for p in m.parameters() if p.requires_grad]
         loss = func(inputs, modules)
-        framework_grad = flatten(convert_none_to_zeros(torch.autograd.grad(loss, params, create_graph=True), params))
+        framework_grad = flatten(
+            convert_none_to_zeros(
+                torch.autograd.grad(loss, params, create_graph=True), params
+            )
+        )
 
         numerical_grad = []
         for param in params:
@@ -2139,14 +2253,18 @@ def gradcheck(
                 numerical_grad.append((plus_eps - minus_eps) / (2 * eps))
                 del plus_eps, minus_eps
         numerical_grad = torch.stack(numerical_grad)
-        torch.testing.assert_allclose(numerical_grad, framework_grad, rtol=rtol, atol=atol)
+        torch.testing.assert_allclose(
+            numerical_grad, framework_grad, rtol=rtol, atol=atol
+        )
 
     # Grad of grad wrt params.
     if gradgrad_params:
 
         def func_high_order(inputs_, modules_):
             params_ = [p for m in modules for p in m.parameters() if p.requires_grad]
-            grads = torch.autograd.grad(func(inputs_, modules_), params_, create_graph=True, allow_unused=True)
+            grads = torch.autograd.grad(
+                func(inputs_, modules_), params_, create_graph=True, allow_unused=True
+            )
             return tuple(grad for grad in grads if grad is not None)
 
         gradcheck(
@@ -2162,7 +2280,9 @@ def gradcheck(
 
 def _make_scalar_valued_func(func, inputs, modules):
     outputs = func(inputs, modules)
-    output_size = outputs.numel() if torch.is_tensor(outputs) else sum(o.numel() for o in outputs)
+    output_size = (
+        outputs.numel() if torch.is_tensor(outputs) else sum(o.numel() for o in outputs)
+    )
 
     if output_size > 1:
         # Define this outside `func_scalar_valued` so that random tensors are generated only once.
@@ -2170,7 +2290,10 @@ def _make_scalar_valued_func(func, inputs, modules):
 
         def func_scalar_valued(inputs_, modules_):
             outputs_ = func(inputs_, modules_)
-            return sum((output * grad_output).sum() for output, grad_output, in zip(outputs_, grad_outputs))
+            return sum(
+                (output * grad_output).sum()
+                for output, grad_output in zip(outputs_, grad_outputs)
+            )
 
         return func_scalar_valued
 
@@ -2223,7 +2346,9 @@ class AvgMeter(Meter):
         if self._val is None:
             self._val = x
         else:
-            self._val = self._val * self._count / (self._count + 1) + x / (self._count + 1)
+            self._val = self._val * self._count / (self._count + 1) + x / (
+                self._count + 1
+            )
         self._count += 1
         return self._val
 
@@ -2309,11 +2434,17 @@ def get_warmup_inverse_sqrt_scheduler(
         if "lr" in param_group:
             param_group["lr"] = 1
 
-    num_warmup_steps = max(num_warmup_steps, 1)  # To prevent raising zero to a negative power.
+    num_warmup_steps = max(
+        num_warmup_steps, 1
+    )  # To prevent raising zero to a negative power.
 
     def _lr_lambda(current_step):
         current_step += 1  # To prevent raising zero to a negative power.
-        return d_model**-0.5 * min(current_step**-0.5, current_step * num_warmup_steps**-1.5) * factor
+        return (
+            d_model**-0.5
+            * min(current_step**-0.5, current_step * num_warmup_steps**-1.5)
+            * factor
+        )
 
     return optim.lr_scheduler.LambdaLR(optimizer, _lr_lambda, last_epoch=last_epoch)
 
@@ -2331,7 +2462,9 @@ def get_linear_lr_scheduler(
     """
 
     def _lr_lambda(current_step):
-        return start_lr + (end_lr - start_lr) * (min(current_step, num_steps) / num_steps)
+        return start_lr + (end_lr - start_lr) * (
+            min(current_step, num_steps) / num_steps
+        )
 
     return optim.lr_scheduler.LambdaLR(optimizer, _lr_lambda, last_epoch=last_epoch)
 
@@ -2373,7 +2506,9 @@ def gs_upload_from_path(local_path, remote_path=None, remove_local=True, timeout
     return success
 
 
-def gs_upload_from_dir(local_directory, remote_directory=None, remove_local=True, timeout=480):
+def gs_upload_from_dir(
+    local_directory, remote_directory=None, remove_local=True, timeout=480
+):
     if remote_directory is None:
         remote_directory = local_directory
 
@@ -2382,7 +2517,9 @@ def gs_upload_from_dir(local_directory, remote_directory=None, remove_local=True
             local_path = os.path.join(root, file)
             remote_path = remote_directory + local_path[len(local_directory) :]
             remote_path = str.lstrip(remote_path, "/")
-            gs_upload_from_path(local_path, remote_path, remove_local=remove_local, timeout=timeout)
+            gs_upload_from_path(
+                local_path, remote_path, remove_local=remove_local, timeout=timeout
+            )
 
 
 def gs_download_from_path(local_path, remote_path=None, timeout=480):
@@ -2478,7 +2615,9 @@ class Timer(object):
             stream = {"stderr": sys.stderr, "stdout": sys.stdout}[stream]
         else:
             if not isinstance(stream, io.IOBase):
-                raise ValueError(f"Expected stream of type `io.IOBase`, but found: {type(stream)}")
+                raise ValueError(
+                    f"Expected stream of type `io.IOBase`, but found: {type(stream)}"
+                )
         self.stream = stream  # Output stream.
         self.logging = logging
         self.level = level
@@ -2564,7 +2703,9 @@ def save_ckpt(
     model: nn.Module,
     optimizer: Optional[optim.Optimizer] = None,
     scheduler: Optional[optim.lr_scheduler._LRScheduler] = None,
-    additional_state_dicts: Optional[Dict] = None,  # Other state_dicts you might want to include.
+    additional_state_dicts: Optional[
+        Dict
+    ] = None,  # Other state_dicts you might want to include.
     cloud_storage=False,  # cloud_storage is the legacy argument.
     to_gcs=False,
 ):
@@ -2659,7 +2800,9 @@ def get_loader(
     import torchvision as tv
 
     if task not in ("density", "classification", "hybrid"):
-        raise ValueError(f"Unknown task: {task}. Expected one of `density`, `classification`, `hybrid`.")
+        raise ValueError(
+            f"Unknown task: {task}. Expected one of `density`, `classification`, `hybrid`."
+        )
     logging.warning(f"Creating loaders for data: {data_name}, task: {task}")
 
     if root is None:
@@ -2677,7 +2820,9 @@ def get_loader(
                 if data_aug:
                     train_transform = tv.transforms.Compose(
                         [
-                            tv.transforms.RandomCrop(32, padding=4, padding_mode=padding_mode),
+                            tv.transforms.RandomCrop(
+                                32, padding=4, padding_mode=padding_mode
+                            ),
                             tv.transforms.RandomHorizontalFlip(),
                             tv.transforms.ToTensor(),
                             tv.transforms.Normalize(mean, std),
@@ -2691,7 +2836,9 @@ def get_loader(
                 if data_aug:
                     train_transform = tv.transforms.Compose(
                         [
-                            tv.transforms.RandomCrop(32, padding=4, padding_mode=padding_mode),
+                            tv.transforms.RandomCrop(
+                                32, padding=4, padding_mode=padding_mode
+                            ),
                             tv.transforms.RandomHorizontalFlip(),
                             tv.transforms.ToTensor(),
                             dequantize,
@@ -2706,9 +2853,13 @@ def get_loader(
                     )
         if test_transform is None:
             if task in ("classification", "hybrid"):
-                test_transform = tv.transforms.Compose([tv.transforms.ToTensor(), tv.transforms.Normalize(mean, std)])
+                test_transform = tv.transforms.Compose(
+                    [tv.transforms.ToTensor(), tv.transforms.Normalize(mean, std)]
+                )
             else:  # `density`.
-                test_transform = tv.transforms.Compose([tv.transforms.ToTensor(), dequantize])
+                test_transform = tv.transforms.Compose(
+                    [tv.transforms.ToTensor(), dequantize]
+                )
 
         if data_name == "cifar10":
             train_data = tv.datasets.CIFAR10(
@@ -2747,7 +2898,9 @@ def get_loader(
                 if data_aug:
                     train_transform = tv.transforms.Compose(
                         [
-                            tv.transforms.RandomCrop(32, padding=4, padding_mode=padding_mode),
+                            tv.transforms.RandomCrop(
+                                32, padding=4, padding_mode=padding_mode
+                            ),
                             tv.transforms.ToTensor(),
                         ]
                     )
@@ -2757,13 +2910,17 @@ def get_loader(
                 if data_aug:
                     train_transform = tv.transforms.Compose(
                         [
-                            tv.transforms.RandomCrop(32, padding=4, padding_mode=padding_mode),
+                            tv.transforms.RandomCrop(
+                                32, padding=4, padding_mode=padding_mode
+                            ),
                             tv.transforms.ToTensor(),
                             dequantize,
                         ]
                     )
                 else:
-                    train_transform = tv.transforms.Compose([tv.transforms.ToTensor(), dequantize])
+                    train_transform = tv.transforms.Compose(
+                        [tv.transforms.ToTensor(), dequantize]
+                    )
         if test_transform is None:
             if task in ("classification", "hybrid"):
                 test_transform = tv.transforms.Compose(
@@ -2802,7 +2959,9 @@ def get_loader(
                     ]
                 )
             else:  # `density`.
-                train_transform = tv.transforms.Compose([tv.transforms.ToTensor(), dequantize])
+                train_transform = tv.transforms.Compose(
+                    [tv.transforms.ToTensor(), dequantize]
+                )
         if test_transform is None:
             if task in ("classification", "hybrid"):
                 test_transform = tv.transforms.Compose(
@@ -2811,7 +2970,9 @@ def get_loader(
                     ]
                 )
             else:  # `density`.
-                test_transform = tv.transforms.Compose([tv.transforms.ToTensor(), dequantize])
+                test_transform = tv.transforms.Compose(
+                    [tv.transforms.ToTensor(), dequantize]
+                )
 
         if data_name == "mnist":
             train_data = tv.datasets.MNIST(
@@ -2860,17 +3021,22 @@ def get_loader(
             )
     elif data_name in ("cinic10", "cinic"):
         # Statistics from https://github.com/BayesWatch/cinic-10#data-loading
-        mean, std = (0.47889522, 0.47227842, 0.43047404), (
-            0.24205776,
-            0.23828046,
-            0.25874835,
+        mean, std = (
+            (0.47889522, 0.47227842, 0.43047404),
+            (
+                0.24205776,
+                0.23828046,
+                0.25874835,
+            ),
         )
         if train_transform is None:
             if task in ("classification", "hybrid"):
                 if data_aug:
                     train_transform = tv.transforms.Compose(
                         [
-                            tv.transforms.RandomCrop(32, padding=4, padding_mode=padding_mode),
+                            tv.transforms.RandomCrop(
+                                32, padding=4, padding_mode=padding_mode
+                            ),
                             tv.transforms.RandomHorizontalFlip(),
                             tv.transforms.ToTensor(),
                             tv.transforms.Normalize(mean, std),
@@ -2884,7 +3050,9 @@ def get_loader(
                 if data_aug:
                     train_transform = tv.transforms.Compose(
                         [
-                            tv.transforms.RandomCrop(32, padding=4, padding_mode=padding_mode),
+                            tv.transforms.RandomCrop(
+                                32, padding=4, padding_mode=padding_mode
+                            ),
                             tv.transforms.RandomHorizontalFlip(),
                             tv.transforms.ToTensor(),
                             dequantize,
@@ -2899,9 +3067,13 @@ def get_loader(
                     )
         if test_transform is None:
             if task in ("classification", "hybrid"):
-                test_transform = tv.transforms.Compose([tv.transforms.ToTensor(), tv.transforms.Normalize(mean, std)])
+                test_transform = tv.transforms.Compose(
+                    [tv.transforms.ToTensor(), tv.transforms.Normalize(mean, std)]
+                )
             else:  # `density`.
-                test_transform = tv.transforms.Compose([tv.transforms.ToTensor(), dequantize])
+                test_transform = tv.transforms.Compose(
+                    [tv.transforms.ToTensor(), dequantize]
+                )
 
         # A bunch of hard-coded stuff that doesn't work if no access to bucket.
         cinic_path = os.path.join(root, "cinic-10")
@@ -3058,7 +3230,9 @@ def early_stopping(global_steps: list, metrics: list, tolerance: int, ascending:
     Returns:
         An integer index for the best position.
     """
-    assert all(i > j for i, j in zip_(global_steps[1:], global_steps[:-1])), "`global_steps` is not increasing."
+    assert all(
+        i > j for i, j in zip_(global_steps[1:], global_steps[:-1])
+    ), "`global_steps` is not increasing."
 
     counts = 0  # The number of impatient steps.
     best = metrics[0]
@@ -3146,8 +3320,13 @@ def gpu_scheduler(
         num_times_failed_to_make_progress = -1
         while len(empty_gpus) == 0:
             num_times_failed_to_make_progress += 1
-            if num_times_failed_to_make_progress > 0 and num_times_failed_to_make_progress % 240 == 0:
-                print(f"Failed to fetch a GPU for {num_times_failed_to_make_progress} seconds.")
+            if (
+                num_times_failed_to_make_progress > 0
+                and num_times_failed_to_make_progress % 240 == 0
+            ):
+                print(
+                    f"Failed to fetch a GPU for {num_times_failed_to_make_progress} seconds."
+                )
             # Don't use `getFirstAvailable`; it is very bad since it throws RuntimeError when no GPU is found.
             empty_gpus = GPUtil.getAvailable(
                 order="first",
@@ -3171,7 +3350,9 @@ def gpu_scheduler(
             command = f"mkdir -p {train_dir}; \n{command}"
 
         # This doesn't wait.
-        proc = subprocess.Popen([command], shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
+        proc = subprocess.Popen(
+            [command], shell=True, stdin=None, stdout=None, stderr=None, close_fds=True
+        )
         procs.append(proc)
         print("command: ")
         print(command)
@@ -3210,8 +3391,12 @@ def smart_tokenizer_and_embedding_resize(
         input_embeddings = model.get_input_embeddings().weight.data
         output_embeddings = model.get_output_embeddings().weight.data
 
-        input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
-        output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
+        input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(
+            dim=0, keepdim=True
+        )
+        output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
+            dim=0, keepdim=True
+        )
 
         input_embeddings[-num_new_tokens:] = input_embeddings_avg
         output_embeddings[-num_new_tokens:] = output_embeddings_avg
@@ -3248,17 +3433,23 @@ def e2e_metrics(
         e2e_metrics_dir_dirname = os.path.dirname(e2e_metrics_dir)
         os.makedirs(e2e_metrics_dir_dirname, exist_ok=True)
         # Be sure to use my fork; I fixed various annoying issues.
-        os.system(f"cd {e2e_metrics_dir_dirname}; git clone https://github.com/lxuechen/e2e-metrics;")
+        os.system(
+            f"cd {e2e_metrics_dir_dirname}; git clone https://github.com/lxuechen/e2e-metrics;"
+        )
 
     # Check if env exists. If not, then create new environment with given name.
-    conda_env_exists = os.system(f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name}'")
+    conda_env_exists = os.system(
+        f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name}'"
+    )
     if conda_env_exists != 0:
         create_conda_env_cmd = f"conda create -n {conda_env_name} python=3.7 -y"
         os.system(f"bash -c 'source {conda_sh_path} && {create_conda_env_cmd}'")
 
     # Install the requirements into conda env.
     cmd = f"cd {e2e_metrics_dir}; pip install -r requirements.txt"
-    cmd = f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name} && {cmd}'"
+    cmd = (
+        f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name} && {cmd}'"
+    )
     os.system(cmd)
 
     # Run evaluation from within the repo.
@@ -3272,7 +3463,9 @@ def e2e_metrics(
     if out_path is not None:
         makedirs(dirname(out_path), exist_ok=True)
         cmd += f"    --out_path {out_path} "
-    cmd = f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name} && {cmd}'"
+    cmd = (
+        f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name} && {cmd}'"
+    )
 
     os.system(cmd)
 
@@ -3306,10 +3499,15 @@ def gem_metrics(
     if not pathexists(gem_metrics_dir):
         gem_metrics_dir_dirname = os.path.dirname(gem_metrics_dir)
         os.makedirs(gem_metrics_dir_dirname, exist_ok=True)
-        os.system(f"cd {gem_metrics_dir_dirname}; " f"git clone https://github.com/GEM-benchmark/GEM-metrics; ")
+        os.system(
+            f"cd {gem_metrics_dir_dirname}; "
+            f"git clone https://github.com/GEM-benchmark/GEM-metrics; "
+        )
 
     # Check if env exists. If not, then create new environment with given name.
-    conda_env_exists = os.system(f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name}'")
+    conda_env_exists = os.system(
+        f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name}'"
+    )
     if conda_env_exists != 0:
         cmd = f"conda create -n {conda_env_name} python=3.7 -y"
         os.system(f"bash -c 'source {conda_sh_path} && {cmd}'")
@@ -3323,19 +3521,24 @@ def gem_metrics(
         #  The annoying issue of can't get torch+cuda installed correctly through requirements.txt...
         f"pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113; "
     )
-    cmd = f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name} && {cmd}'"
+    cmd = (
+        f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name} && {cmd}'"
+    )
     os.system(cmd)
 
     metric_list = " ".join(metric_list)
     cmd = (
-        f"cd {gem_metrics_dir}; " f"./run_metrics.py {generation_path} -r {reference_path} --metric-list {metric_list} "
+        f"cd {gem_metrics_dir}; "
+        f"./run_metrics.py {generation_path} -r {reference_path} --metric-list {metric_list} "
     )
     if out_path is not None:
         makedirs(dirname(out_path), exist_ok=True)
         cmd += f"-o {out_path} "
     if heavy_metrics:
         cmd += "--heavy-metrics "
-    cmd = f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name} && {cmd}'"
+    cmd = (
+        f"bash -c 'source {conda_sh_path} && conda activate {conda_env_name} && {cmd}'"
+    )
 
     os.system(cmd)
 
@@ -3357,11 +3560,15 @@ def get_seq_len_dist_enc_dec(
 
     hf_datadict takes form {split: [{enc_key: str, dec_key: str}, ...]}
     """
-    _increment_key_for_dict = lambda d, k: d.update({k: d[k] + 1}) if k in d else d.update({k: 1})
+    _increment_key_for_dict = (
+        lambda d, k: d.update({k: d[k] + 1}) if k in d else d.update({k: 1})
+    )
 
     result = dict()
     for split in splits:
-        enc_counts_map, dec_counts_map, cat_counts_map = tuple(dict() for _ in range(3))  # seq_len -> count
+        enc_counts_map, dec_counts_map, cat_counts_map = tuple(
+            dict() for _ in range(3)
+        )  # seq_len -> count
         enc_counts_list, dec_counts_list, cat_counts_list = tuple([] for _ in range(3))
         for idx, instance in tqdm.tqdm(
             enumerate(hf_datadict[split]),
